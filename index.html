@@ -19,6 +19,7 @@
         }
     </style>
 	
+	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>	    
 
 </head>
 <body>
@@ -55,9 +56,13 @@
     
 	<script src="script.js"></script>
 	
-	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>	    
 	
 	<script>
+
+		cv['onRuntimeInitialized'] = () => {
+    		console.log("OpenCV ready");
+    		requestAnimationFrame(tick);   // ← 初期化後に tick を開始
+		};
 
 		// 閾値のスライダを動かすとラベルに表示される数値が変わる
 		const value = document.querySelector("#value");
@@ -189,7 +194,7 @@
 				src.delete();
         		thres.delete();
 
-				requestAnimationFrame(tick);
+				//requestAnimationFrame(tick);
 			}
 			
 				
@@ -221,8 +226,8 @@
 				cv.LINE_AA // ラインタイプ
 			);
 			return [ctx, strdatetime];
-		}	
-	
+		}
+		
 
 	</script>
 </body>

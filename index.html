@@ -4,12 +4,8 @@
     <meta charset="UTF-8">
     <title>Canvas 二値化・枠線</title>
     <style>
-		.left{
-      		float: left;
-    	}
-
 		fieldset {
-			width: 500px;
+			width: 300px;
 			margin: 10px;
 			padding-top: 5px;
 			padding-bottom: 5px;
@@ -23,91 +19,50 @@
         }
     </style>
 	
-	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>
+	<script src="script.js"></script>
 	<!--
-	<script src = "./opencv.js"></script>	    
+	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>	    
 	-->
+	<script>
     
 
 </head>
 <body>
 	
-	<div class = "left config">
-
-		<div class = "threshold">
-			<!-- 二値化の閾値 -->
-			<fieldset>
-				<legend>白と黒の閾値</legend>
-				<label for="threshold">閾値(0~255):</label>
-				<input type="range" id="threshold" name="threshold" min="0" max="255" value="40"/>
-				値: <output id="value"></output>
-			</fieldset>
-		</div>
-
-		<div class = "contourArea">
-			<!-- 黒の面積 -->
-			<fieldset>
-				<legend>検知対象の面積の閾値</legend>
-				<label for="contourArea">閾値(10~1000):</label>
-				<input type="range" id="contourArea" name="contourArea" min="10" max="1000" value="200"/>
-				値: <output id="val_area"></output>
-			</fieldset>
-		</div>
-		
-
-		<div class = "interval">
-			<!-- 描画のインターバル -->
-			<fieldset>
-				<legend>再描画の間隔</legend> 
-				<label for="interval">間隔(100~1000ミリ秒):</label>
-				<input type="range" id="interval" name="interval" min="1" max="10" value="5"/>
-				値: <output id="val_interval"></output>
-			</fieldset>
-		</div>
-
-		<fieldset>
-			<legend>輪郭線を描く</legend>
-		<!--
-			<input type="checkbox" id="outlines" name="outlines" checked />
-			<label for="outlines">描画する</label>
-		-->
-			<form id = "radio_contour">
-				<input type="radio" id="contour_none" name="color_contour" value="none" checked/>
-				<label for="contour_none">なし</label>
-
-				<input type="radio" id="contour_red" name="color_contour" value="red" />
-				<label for="contour_red">赤</label>
-
-				<input type="radio" id="contour_green" name="color_contour" value="green" />
-				<label for="contour_green">緑</label>
-			
-			</form>
-			<p>「なし」から「赤」「緑」にすると撮影のスイッチが入ります</p>
-		</fieldset>
-
-		<fieldset>
-			<legend>音量</legend>
-				<label for="soundVolume">音量(0~10):</label>
-				<input type="range" id="soundVolume" name="soundVolume" min="0" max="10"  value="5"/>
-				値: <output id="volume"></output>
-
-				<button id = "playButton" onclick="start()">開始</button>
-				<button id = "stopButton" onclick="abort()">停止</button>
-
-		</fieldset>
-	</div>
-
-	<!-- キャンバス
-	contours:<output id="counter"></output>
-	-->
-	<div class = "left container">
-		<div class="container">
-			<canvas id="imageCanvas" hidden></canvas>
-			<canvas id="scaledCanvas" ></canvas>
-		</div>
-	</div>
-    
+	<!-- 二値化の閾値 -->
+	<label for="threshold">閾値(0~255):</label>
+	<input type="range" id="threshold" name="threshold" min="0" max="255"/>
+	値: <output id="value"></output>
 	
+	<fieldset>
+		<legend>輪郭線を描く</legend>
+	<!--
+		<input type="checkbox" id="outlines" name="outlines" checked />
+		<label for="outlines">描画する</label>
+	-->
+		<form id = "radio_contour">
+			<input type="radio" id="contour_none" name="color_contour" value="none" checked/>
+			<label for="contour_none">なし</label>
+
+			<input type="radio" id="contour_red" name="color_contour" value="red" />
+			<label for="contour_red">赤</label>
+
+			<input type="radio" id="contour_green" name="color_contour" value="green" />
+			<label for="contour_green">緑</label>
+		
+		</form>
+	</fieldset>
+
+	<div class="container">
+        <canvas id="imageCanvas" hidden></canvas>
+		<canvas id="scaledCanvas" ></canvas>
+    </div>
+
+    
+	<script src="script.js"></script>
+	<!--
+	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>	    
+	-->
 	<script>
 
 		// 閾値のスライダを動かすとラベルに表示される数値が変わる
@@ -115,43 +70,10 @@
 		const input = document.querySelector("#threshold");
 		value.textContent = input.value;
 		input.addEventListener("input", (event) => {
-			value.textContent = event.target.value;
-		});
-
-		// 検知対象の面積の閾値のスライダを動かすとラベルに表示される数値が変わる
-		const val_area = document.querySelector("#val_area");
-		const input_area = document.querySelector("#contourArea");
-		val_area.textContent = input_area.value;
-		input_area.addEventListener("input", (event) => {
-			val_area.textContent = event.target.value;
+		value.textContent = event.target.value;
 		});
 
 
-		// 再描画の間隔のスライダを動かすとラベルに表示される数値が変わる
-		const val_interval = document.querySelector("#val_interval");
-		const input_interval = document.querySelector("#interval");
-		val_interval.textContent = input_interval.value * 100;
-		input_interval.addEventListener("input", (event) => {
-			val_interval.textContent = event.target.value * 100;
-		});
-
-		// 音量のスライダを動かすとラベルに表示される数値が変わる
-		const volume = document.querySelector("#volume");
-    	const inputVolume = document.querySelector("#soundVolume");
-    	volume.textContent = inputVolume.value;
-
-		let currentAudio = null; //　再生中の音を保持
-
-		inputVolume.addEventListener("input", (event) => {
-			volume.textContent = event.target.value;
-			if(currentAudio){
-				 // スライダは1刻みだが、音量は0~1の範囲なので、*0.1する
-				currentAudio.volume = event.target.value * 0.1;
-			}    
-		});
-
-
-		// 描画で使う変数
 		const video = document.createElement("video");
 		
 		const canvasElement = document.getElementById("imageCanvas");
@@ -160,31 +82,23 @@
 		const canvasElement2 = document.getElementById("scaledCanvas");
 		const canvas2 = canvasElement2.getContext("2d");
 
-		let margin = 20; // キャンバスの端から20px分を余白とする
-
-		// 解像度の設定
-			// let getwidth = 800;
-			// let getheight = 450;
-
-		
-		// 初期値はHD画質
-		let getwidth = 1280;
-		let getheight = 720;
-		/*
-		// フルHDかHDかを選べるようにはしない	
-		function setSize(result){
-			if (result === 'フルHD'){
-				getwidth = 1920; //1920
-				getheight = 1080; //1080
-			}
-			document.getElementById('resolution').textContent = "解像度:" + result;
-			
-		}
-		*/	
-		
-		// 輪郭線の描画の有無を判定するフラグ(音の出力に関係する)
-		let flag = false;
 	
+		// Apps Scriptから解像度を取得
+
+		// 初期値はHD画質
+		let getwidth = 800;
+		let getheight = 450;
+
+		// フルHDかHDかを選べるようにはしない	
+		// function setSize(result){
+		// 	if (result === 'フルHD'){
+				// getwidth = 1920; //1920
+				// getheight = 1080; //1080
+		// 	}
+		// 	document.getElementById('resolution').textContent = "解像度:" + result;
+			
+		// }
+		
 		navigator.mediaDevices.getUserMedia({
 			audio: false,
 			video: {
@@ -202,18 +116,14 @@
 			video.onloadedmetadata = () => {
 			video.play();
 			//findQR();
-			console.log("表示できました");
+			console.log("表示できました")
 			requestAnimationFrame(tick);
 			}
 		})
 
-		let stopFlag = false;	// 再帰処理を止めるためのフラグ
+
 
 		function tick() {
-			
-			flag = false; // 音の出力を制御するフラグ
-			saveflag = false; // 画像の保存を制御するフラグ
-			
 			//loadingMessage.innerText = "Loading video..."
 			if (video.readyState === video.HAVE_ENOUGH_DATA) {
 				/*
@@ -231,6 +141,9 @@
 
 				let thres = new cv.Mat();
 				cv.threshold(gray, thres, Number(input.value), 255, cv.THRESH_BINARY);
+
+				// カラー化用の Mat を用意
+				let color = new cv.Mat();
 				
 				const radio_contour = document.getElementById("radio_contour");
 				if (radio_contour.color_contour.value != "none"){
@@ -238,10 +151,7 @@
 					let contours = new cv.MatVector();
 					let hierarchy = new cv.Mat();
 					cv.findContours(thres, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-
-
-					// カラー化用の Mat を用意
-					let color = new cv.Mat();
+					
 					// GRAY → RGBA に変換
 					cv.cvtColor(thres, color, cv.COLOR_GRAY2RGBA);
 					
@@ -252,125 +162,47 @@
 					}else{
 						contourColor = new cv.Scalar(0, 255, 0, 255); //RGBA: 緑、不透明
 					}
-					
-					const val_area = document.getElementById("val_area").textContent;
-					const nValArea = Number(val_area);
+
 					let thickness = 2;
 					// 全ての輪郭を描画
 					for (let i = 0; i < contours.size(); i++) {
-						let cnt = contours.get(i);
-						let area = cv.contourArea(cnt);
-						if (area > nValArea) continue; // 面積フィルタ(大き過ぎるものは排除)
-
-						let rect = cv.boundingRect(cnt);
-						if (rect.x < margin && rect.y < margin &&
-							rect.x + rect.width > src.cols - margin &&
-							rect.y + rect.height > src.rows - margin) {
-							continue; // 端の除外
-						}
-						// 音の出力に関するフラグを反転
-						flag = true;
-						saveflag = true;
-						
 						cv.drawContours(color, contours, i, contourColor, thickness, cv.LINE_8, hierarchy, 0);
 					}
 
 					// 画像に日時を表示する
 					// 画像を保存する場合に日時をファイル名にするため、画像コンテクストと日時の文字列を戻り値に設定
-					const [ctx, strdatetime] = drowDateTime(color, contourColor);
-					
+					const [ctx, strdatetime] = drowDateTime(color);
 					
 					cv.imshow('scaledCanvas', ctx); // 結果を表示
-
-					if (saveflag){
-						const a = document.createElement("a"); // a要素の作成
-						a.href = canvasElement2.toDataURL("image/png"); // href属性のセット
-						a.download = strdatetime + ".png";  // ファイル名のセット
-						a.click();   // 疑似的にクリック
-					}
-
 					color.delete();
 					contours.delete();
 					hierarchy.delete();
+					
+					// // 画像を保存
+					// const saveImg = document.createElement("saveImg");
+					// saveImg.href = scaledCanvas.toDataURL("image/jpeg", 0.75); // PNGなら"image/png"
+					// saveImg.download = strdatetime + ".jpg";
+					// saveImg.click();
+
 
 
 				}else{
 					cv.imshow('scaledCanvas', thres); // 結果を表示
 				}
+
 				
 				gray.delete();
 				src.delete();
         		thres.delete();
-				
-				//requestAnimationFrame(tick);
 
-				// 指定の時間を置いて再描画
-				const millisec = Number(document.getElementById("val_interval").textContent); // 描画のインターバル(ミリ秒)
-				setTimeout(tick, millisec); 
+				requestAnimationFrame(tick);
 			}
+			
 				
 		}
-
-
-		
-
-		function start(){
-		
-			flag = false;
-			stopFlag = false;
-			// tick();
-			soundLoop();
-			
-		}
-
-
-
-		// アラート音を出すための関数
-		function soundLoop(){
-			if (stopFlag){
-				return;
-			}
-			const duration = 2000; // 再生する音楽ファイルの長さ
-			let currentTime = 0; // 再生中の音楽ファイルの現在位置
-			// console.log("!currentAudio: " +  !currentAudio);
-			// console.log("flag: " + flag);
-			
-			if(!currentAudio){
-				if(flag){
-					currentAudio = new Audio('./Warning-Siren01-4L.mp3'); 
-					currentAudio.volume = inputVolume.value * 0.1;
-					currentAudio.play();
-					setTimeout(soundLoop, 2000); // 音楽ファイルの音の長さに合わせる(ここでは2秒ごと)
-				}else{
-					/*
-					flag=false(=異物検知がない)場合に「soundLoop();」では回数が多くてハングアップするので
-					0.5秒に1度の間隔でループさせる 
-					*/
-					setTimeout(soundLoop, 500); 
-				}
-			}else{
-				currentTime = currentAudio.currentTime;
-				// console.log("currentTime: " + currentTime);
-				currentAudio.addEventListener('ended', () => {
-					currentAudio = null; // 再生が終わったらリセット
-					flag = false;
-				});
-				setTimeout(soundLoop, duration - currentTime); // 音楽ファイルの音の長さに合わせる(ここでは2秒ごと)
-			}
-		}
 		
 		
-		// 停止ボタンが押されたら停止フラグを立てて音が鳴らないようにする		
-		function abort(){
-			stopFlag = true;
-			if(currentAudio){
-				currentAudio.pause();   // 即停止
-				currentAudio = null;
-			}
-		}
-
-		// 現在の日時を描画する関数
-		function drowDateTime(ctx, textColor) {
+		function drowDateTime(ctx) {
 		
 			// 現在の日時を取得し、整形する
 			let now = new Date();
@@ -382,7 +214,6 @@
 				strdatetime += ('0' + now.getHours()).slice(-2);
 				strdatetime += ('0' + now.getMinutes()).slice(-2);
 				strdatetime += ('0' + now.getSeconds()).slice(-2);
-				strdatetime += ('00' + now.getMilliseconds()).slice(-3);
 			// 画像（Matオブジェクト）にテキストを描画
 			// cv.putText(画像データ, テキスト, 開始座標, フォント, スケール, 色, 太さ, ラインタイプ)
 			cv.putText(
@@ -391,18 +222,18 @@
 				new cv.Point(10, 30), // 描画開始座標 (x, y)
 				cv.FONT_HERSHEY_SIMPLEX, // フォントの種類
 				1, // スケール
-				textColor, // 輪郭線と同じ色にする
-				// cv.Scalar(0, 0, 255, 255), // 色 (B, G, R, Alpha) - 青色に設定
+				new cv.Scalar(0, 0, 255, 255), // 色 (B, G, R, Alpha) - 青色に設定
 				2, // 太さ
 				cv.LINE_AA // ラインタイプ
 			);
 			return [ctx, strdatetime];
 		}	
-
-
-
-
+	
 
 	</script>
 </body>
 </html>
+
+
+
+

@@ -4,232 +4,171 @@
     <meta charset="UTF-8">
     <title>Canvas 二値化・枠線</title>
     <style>
-		fieldset {
-			width: 300px;
-			margin: 10px;
-			padding-top: 5px;
-			padding-bottom: 5px;
-			padding-left: 10px;
-		}
+        fieldset {
+            width: 300px;
+            margin: 10px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            padding-left: 10px;
+        }
         canvas {
-            border: 1px solid #ccc; /* 処理前のcanvasにも枠を表示 */
+            border: 1px solid #ccc;
         }
         .container {
             margin-top: 10px;
         }
     </style>
-	
-	<script src="https://docs.opencv.org/3.4.1/opencv.js"></script>
-	<!--
-	<script src="script.js"></script>	    
-	-->
-	<script>
 
-    
-
+    <script src="https://docs.opencv.org/3.4.1/opencv.js"></script>
 </head>
+
 <body>
-	
-	<!-- 二値化の閾値 -->
-	<label for="threshold">閾値(0~255):</label>
-	<input type="range" id="threshold" name="threshold" min="0" max="255"/>
-	値: <output id="value"></output>
-	
-	<fieldset>
-		<legend>輪郭線を描く</legend>
-	<!--
-		<input type="checkbox" id="outlines" name="outlines" checked />
-		<label for="outlines">描画する</label>
-	-->
-		<form id = "radio_contour">
-			<input type="radio" id="contour_none" name="color_contour" value="none" checked/>
-			<label for="contour_none">なし</label>
 
-			<input type="radio" id="contour_red" name="color_contour" value="red" />
-			<label for="contour_red">赤</label>
+    <!-- 二値化の閾値 -->
+    <label for="threshold">閾値(0~255):</label>
+    <input type="range" id="threshold" name="threshold" min="0" max="255"/>
+    値: <output id="value"></output>
 
-			<input type="radio" id="contour_green" name="color_contour" value="green" />
-			<label for="contour_green">緑</label>
-		
-		</form>
-	</fieldset>
+    <fieldset>
+        <legend>輪郭線を描く</legend>
 
-	<div class="container">
+        <form id="radio_contour">
+            <input type="radio" id="contour_none" name="color_contour" value="none" checked/>
+            <label for="contour_none">なし</label>
+
+            <input type="radio" id="contour_red" name="color_contour" value="red" />
+            <label for="contour_red">赤</label>
+
+            <input type="radio" id="contour_green" name="color_contour" value="green" />
+            <label for="contour_green">緑</label>
+        </form>
+    </fieldset>
+
+    <div class="container">
         <canvas id="imageCanvas" hidden></canvas>
-		<canvas id="scaledCanvas" ></canvas>
+        <canvas id="scaledCanvas"></canvas>
     </div>
 
-    
+    <!-- ★★★ JavaScript はここにまとめる ★★★ -->
+    <script>
+        // 閾値のスライダ表示
+        const value = document.querySelector("#value");
+        const input = document.querySelector("#threshold");
+        value.textContent = input.value;
+        input.addEventListener("input", (event) => {
+            value.textContent = event.target.value;
+        });
 
-		// 閾値のスライダを動かすとラベルに表示される数値が変わる
-		const value = document.querySelector("#value");
-		const input = document.querySelector("#threshold");
-		value.textContent = input.value;
-		input.addEventListener("input", (event) => {
-		value.textContent = event.target.value;
-		});
+        const video = document.createElement("video");
 
+        const canvasElement = document.getElementById("imageCanvas");
+        const canvas = canvasElement.getContext("2d");
 
-		const video = document.createElement("video");
-		
-		const canvasElement = document.getElementById("imageCanvas");
-		const canvas = canvasElement.getContext("2d");
+        const canvasElement2 = document.getElementById("scaledCanvas");
+        const canvas2 = canvasElement2.getContext("2d");
 
-		const canvasElement2 = document.getElementById("scaledCanvas");
-		const canvas2 = canvasElement2.getContext("2d");
+        let getwidth = 800;
+        let getheight = 450;
 
-	
-		// Apps Scriptから解像度を取得
+        navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: { ideal: 'environment' },
+                width: { ideal: getwidth },
+                height: { ideal: getheight },
+                aspectRatio: { ideal: 9 / 16 },
+            },
+        })
+        .then((stream) => {
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                console.log("表示できました");
+                requestAnimationFrame(tick);
+            };
+        });
 
-		// 初期値はHD画質
-		let getwidth = 800;
-		let getheight = 450;
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-		// フルHDかHDかを選べるようにはしない	
-		// function setSize(result){
-		// 	if (result === 'フルHD'){
-				// getwidth = 1920; //1920
-				// getheight = 1080; //1080
-		// 	}
-		// 	document.getElementById('resolution').textContent = "解像度:" + result;
-			
-		// }
-		
-		navigator.mediaDevices.getUserMedia({
-			audio: false,
-			video: {
-			facingMode: {
-				ideal: 'environment',
-			},
-			width: { ideal: getwidth }, /* フルHD画質（HDなら1280) */
-			height: { ideal: getheight }, /* フルHD画質（HDなら720) */
-			//aspectRatio: ratio,
-			aspectRatio: { ideal: 9 / 16 },
-			},
-		})
-		.then((stream) => {
-			video.srcObject = stream
-			video.onloadedmetadata = () => {
-			video.play();
-			//findQR();
-			console.log("表示できました")
-			requestAnimationFrame(tick);
-			}
-		})
+                let src = cv.imread('imageCanvas');
+                let gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
+                let thres = new cv.Mat();
+                cv.threshold(gray, thres, Number(input.value), 255, cv.THRESH_BINARY);
 
+                let color = new cv.Mat();
+                const radio_contour = document.getElementById("radio_contour");
 
-		function tick() {
-			//loadingMessage.innerText = "Loading video..."
-			if (video.readyState === video.HAVE_ENOUGH_DATA) {
-				/*
-				loadingMessage.hidden = true;
-				canvasElement.hidden = false;
-				outputContainer.hidden = false;
-				*/
-				canvasElement.height = video.videoHeight;
-				canvasElement.width = video.videoWidth;
-				canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                if (radio_contour.color_contour.value != "none") {
+                    let contours = new cv.MatVector();
+                    let hierarchy = new cv.Mat();
+                    cv.findContours(thres, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
-				let src = cv.imread('imageCanvas'); // canvasに描画済み画像を取得
-				let gray = new cv.Mat();
-				cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY,0);
+                    cv.cvtColor(thres, color, cv.COLOR_GRAY2RGBA);
 
-				let thres = new cv.Mat();
-				cv.threshold(gray, thres, Number(input.value), 255, cv.THRESH_BINARY);
+                    let contourColor;
+                    const red = document.getElementById("contour_red");
+                    if (red.checked) {
+                        contourColor = new cv.Scalar(255, 0, 0, 255);
+                    } else {
+                        contourColor = new cv.Scalar(0, 255, 0, 255);
+                    }
 
-				// カラー化用の Mat を用意
-				let color = new cv.Mat();
-				
-				const radio_contour = document.getElementById("radio_contour");
-				if (radio_contour.color_contour.value != "none"){
-					// 輪郭検出
-					let contours = new cv.MatVector();
-					let hierarchy = new cv.Mat();
-					cv.findContours(thres, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-					
-					// GRAY → RGBA に変換
-					cv.cvtColor(thres, color, cv.COLOR_GRAY2RGBA);
-					
-					let contourColor;
-					const red = document.getElementById("contour_red");
-					if (red.checked){
-						contourColor = new cv.Scalar(255, 0, 0, 255); //RGBA: 赤、不透明
-					}else{
-						contourColor = new cv.Scalar(0, 255, 0, 255); //RGBA: 緑、不透明
-					}
+                    let thickness = 2;
+                    for (let i = 0; i < contours.size(); i++) {
+                        cv.drawContours(color, contours, i, contourColor, thickness, cv.LINE_8, hierarchy, 0);
+                    }
 
-					let thickness = 2;
-					// 全ての輪郭を描画
-					for (let i = 0; i < contours.size(); i++) {
-						cv.drawContours(color, contours, i, contourColor, thickness, cv.LINE_8, hierarchy, 0);
-					}
+                    const [ctx, strdatetime] = drowDateTime(color);
+                    cv.imshow('scaledCanvas', ctx);
 
-					// 画像に日時を表示する
-					// 画像を保存する場合に日時をファイル名にするため、画像コンテクストと日時の文字列を戻り値に設定
-					const [ctx, strdatetime] = drowDateTime(color);
-					
-					cv.imshow('scaledCanvas', ctx); // 結果を表示
-					color.delete();
-					contours.delete();
-					hierarchy.delete();
-					
-					// // 画像を保存
-					// const saveImg = document.createElement("saveImg");
-					// saveImg.href = scaledCanvas.toDataURL("image/jpeg", 0.75); // PNGなら"image/png"
-					// saveImg.download = strdatetime + ".jpg";
-					// saveImg.click();
+                    color.delete();
+                    contours.delete();
+                    hierarchy.delete();
+                } else {
+                    cv.imshow('scaledCanvas', thres);
+                }
 
+                gray.delete();
+                src.delete();
+                thres.delete();
 
+                requestAnimationFrame(tick);
+            }
+        }
 
-				}else{
-					cv.imshow('scaledCanvas', thres); // 結果を表示
-				}
+        function drowDateTime(ctx) {
+            let now = new Date();
+            let datetimeText = now.toLocaleString();
+            let strdatetime = "";
+            strdatetime += now.getFullYear();
+            strdatetime += ('0' + (now.getMonth() + 1)).slice(-2);
+            strdatetime += ('0' + now.getDate()).slice(-2);
+            strdatetime += ('0' + now.getHours()).slice(-2);
+            strdatetime += ('0' + now.getMinutes()).slice(-2);
+            strdatetime += ('0' + now.getSeconds()).slice(-2);
 
-				
-				gray.delete();
-				src.delete();
-        		thres.delete();
+            cv.putText(
+                ctx,
+                datetimeText,
+                new cv.Point(10, 30),
+                cv.FONT_HERSHEY_SIMPLEX,
+                1,
+                new cv.Scalar(0, 0, 255, 255),
+                2,
+                cv.LINE_AA
+            );
+            return [ctx, strdatetime];
+        }
+    </script>
 
-				requestAnimationFrame(tick);
-			}
-			
-				
-		}
-		
-		
-		function drowDateTime(ctx) {
-		
-			// 現在の日時を取得し、整形する
-			let now = new Date();
-			let datetimeText = now.toLocaleString(); // "YYYY/MM/DD HH:MM:SS"のような形式
-			var strdatetime = "";
-				strdatetime += now.getFullYear();
-				strdatetime += ('0' + (now.getMonth() + 1)).slice(-2);
-				strdatetime += ('0' + now.getDate()).slice(-2);
-				strdatetime += ('0' + now.getHours()).slice(-2);
-				strdatetime += ('0' + now.getMinutes()).slice(-2);
-				strdatetime += ('0' + now.getSeconds()).slice(-2);
-			// 画像（Matオブジェクト）にテキストを描画
-			// cv.putText(画像データ, テキスト, 開始座標, フォント, スケール, 色, 太さ, ラインタイプ)
-			cv.putText(
-				ctx, 
-				datetimeText, 
-				new cv.Point(10, 30), // 描画開始座標 (x, y)
-				cv.FONT_HERSHEY_SIMPLEX, // フォントの種類
-				1, // スケール
-				new cv.Scalar(0, 0, 255, 255), // 色 (B, G, R, Alpha) - 青色に設定
-				2, // 太さ
-				cv.LINE_AA // ラインタイプ
-			);
-			return [ctx, strdatetime];
-		}	
-	
-
-	</script>
 </body>
 </html>
-
 
 
 

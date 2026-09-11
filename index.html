@@ -12,7 +12,7 @@
             padding-left: 10px;
         }
         canvas {
-            border: 1px solid #ccc; /* 処理前のcanvasにも枠を表示 */
+            border: 1px solid #ccc;
         }
         .container {
             margin-top: 10px;
@@ -45,27 +45,24 @@
         <canvas id="scaledCanvas"></canvas>
     </div>
 
-    <!-- OpenCV.js を非同期ロードし、ロード完了時に onOpenCvReady をコールバック -->
-    <script async src="https://docs.opencv.org/3.4.1/opencv.js" onload="onOpenCvReady();"></script>
+    <!-- CDN (jsDelivr) から OpenCV.js を読み込む -->
+    <script async src="https://cdn.jsdelivr.net/npm/opencv-wasm@4.3.0/opencv.js" onload="onOpenCvReady();"></script>
     
     <script>
         let isOpenCvReady = false;
 
-        // OpenCV.js の読み込み完了時に呼ばれる関数
         function onOpenCvReady() {
-            // WASMの初期化完了を確認（Module.onRuntimeInitialized を使用）
-            if (cv.getBuildInformation) {
+            if (window.cv && cv.getBuildInformation) {
                 isOpenCvReady = true;
-                console.log("OpenCV.js is ready.");
+                console.log("OpenCV.js ready");
             } else {
                 cv['onRuntimeInitialized'] = () => {
                     isOpenCvReady = true;
-                    console.log("OpenCV.js (WASM) is ready.");
+                    console.log("OpenCV.js (WASM) ready");
                 };
             }
         }
 
-        // 閾値のスライダを動かすとラベルに表示される数値が変わる
         const value = document.querySelector("#value");
         const input = document.querySelector("#threshold");
         value.textContent = input.value;
@@ -81,29 +78,43 @@
         const canvasElement2 = document.getElementById("scaledCanvas");
         const canvas2 = canvasElement2.getContext("2d");
 
-        let getwidth = 800;
-        let getheight = 450;
+        // カメラ起動処理（フォールバック付き）
+        async function startCamera() {
+            const constraintsList = [
+                // 優先設定（背面カメラ・解像度指定）
+                {
+                    audio: false,
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 800 },
+                        height: { ideal: 450 }
+                    }
+                },
+                // エラー時のフォールバック設定（基本の動画入力）
+                {
+                    audio: false,
+                    video: true
+                }
+            ];
 
-        navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                facingMode: { ideal: 'environment' },
-                width: { ideal: getwidth },
-                height: { ideal: getheight },
-                aspectRatio: { ideal: 9 / 16 },
-            },
-        })
-        .then((stream) => {
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-                console.log("カメラ表示準備完了");
-                requestAnimationFrame(tick);
-            };
-        })
-        .catch((err) => {
-            console.error("カメラのアクセスに失敗しました:", err);
-        });
+            for (const constraints of constraintsList) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        console.log("カメラ表示開始");
+                        requestAnimationFrame(tick);
+                    };
+                    return; // 成功したら抜ける
+                } catch (err) {
+                    console.warn("Constraint failed, trying fallback...", err);
+                }
+            }
+            console.error("カメラのアクセスに完全失敗しました。他のアプリでカメラが使われていないか確認してください。");
+        }
+
+        startCamera();
 
         function tick() {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -111,7 +122,6 @@
                 canvasElement.width = video.videoWidth;
                 canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-                // OpenCV.js の準備が完了するまでは処理をスキップ
                 if (!isOpenCvReady) {
                     requestAnimationFrame(tick);
                     return;
@@ -138,9 +148,9 @@
                         let contourColor;
                         const red = document.getElementById("contour_red");
                         if (red.checked) {
-                            contourColor = new cv.Scalar(255, 0, 0, 255); // RGBA: 赤
+                            contourColor = new cv.Scalar(255, 0, 0, 255);
                         } else {
-                            contourColor = new cv.Scalar(0, 255, 0, 255); // RGBA: 緑
+                            contourColor = new cv.Scalar(0, 255, 0, 255);
                         }
 
                         let thickness = 2;
@@ -148,30 +158,27 @@
                             cv.drawContours(color, contours, i, contourColor, thickness, cv.LINE_8, hierarchy, 0);
                         }
 
-                        // 関数名のタイポを修正 (drowDateTime -> drawDateTime)
                         const [ctx, strdatetime] = drawDateTime(color);
-                        
-                        cv.imshow('scaledCanvas', color); // 描画結果を表示
+                        cv.imshow('scaledCanvas', color);
                         
                         color.delete();
                         contours.delete();
                         hierarchy.delete();
                     } else {
                         cv.imshow('scaledCanvas', thres);
-                        color.delete(); // Matインスタンスの解放
+                        color.delete();
                     }
 
                     gray.delete();
                     src.delete();
                     thres.delete();
                 } catch (err) {
-                    console.error("OpenCV processing error:", err);
+                    console.error("OpenCV Error:", err);
                 }
             }
             requestAnimationFrame(tick);
         }
 
-        // 関数名の表記を統一 (drowDateTime -> drawDateTime)
         function drawDateTime(matCtx) {
             let now = new Date();
             let datetimeText = now.toLocaleString();
@@ -189,7 +196,7 @@
                 new cv.Point(10, 30),
                 cv.FONT_HERSHEY_SIMPLEX,
                 1,
-                new cv.Scalar(255, 0, 0, 255), // OpenCVのRGBA順（赤色）
+                new cv.Scalar(255, 0, 0, 255),
                 2,
                 cv.LINE_AA
             );
@@ -198,4 +205,3 @@
     </script>
 </body>
 </html>
-
